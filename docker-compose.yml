@@ -8,8 +8,8 @@ services:
     ports:
       - "3000:3000"
     environment:
-      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/api_database?schema=public
-      - JWT_SECRET=seu_jwt_secret_aqui_muito_seguro
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/postgres?schema=public
+      - JWT_SECRET=7b1798c92291111f618d256e52cd30fda6e1eca0b25c2a243c1af4b5477b0047
       - NODE_ENV=production
       - PORT=3000
     depends_on:
@@ -19,13 +19,13 @@ services:
       - app-network
 
   postgres:
-    image: postgres:15
+    image: postgres:17
     ports:
-      - "5432:5432"
+      - "5433:5432"  # Corrigido: expõe 5432 do container na 5433 do host
     environment:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
-      - POSTGRES_DB=api_database
+      - POSTGRES_DB=postgres
     volumes:
       - postgres-data:/var/lib/postgresql/data
     networks:
