@@ -1,8 +1,8 @@
 import { Request, Response } from 'express';
 
 /**
- * Middleware para lidar com rotas não encontradas
+ * Middleware para tratar rotas não encontradas
  */
-export const notFoundHandler = (req: Request, res: Response) => {
-  res.status(404).json({ error: 'Rota não encontrada.' });
+export const notFoundHandler = (_req: Request, res: Response) => {
+  res.status(404).json({ message: 'Recurso não encontrado' });
 };

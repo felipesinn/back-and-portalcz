@@ -1,16 +1,6 @@
 import jwt from 'jsonwebtoken';
 
-// Verificar o JWT_SECRET no ambiente
-if (!process.env.JWT_SECRET) {
-  console.error('ERRO: Variável de ambiente JWT_SECRET não definida!');
-  process.exit(1);
-}
-
-const secret = process.env.JWT_SECRET;
-
-/**
- * Interface para o payload do token JWT
- */
+// Tipos para o payload do token
 interface TokenPayload {
   id: number;
   email: string;
@@ -18,16 +8,26 @@ interface TokenPayload {
   permissions: string[];
 }
 
+// Secret key para assinar os tokens (deve estar no .env em produção)
+const JWT_SECRET = process.env.JWT_SECRET || 'sua_chave_secreta';
+
+// Tempo de expiração do token (em segundos ou uma string como '1d', '2h', etc.)
+const TOKEN_EXPIRY = '24h';
+
 /**
- * Gera um token JWT com os dados do usuário
+ * Assina um token JWT
  */
-export function signToken(payload: TokenPayload): string {
-  return jwt.sign(payload, secret, { expiresIn: '7d' });
-}
+export const signToken = (payload: TokenPayload): string => {
+  return jwt.sign(payload, JWT_SECRET, { expiresIn: TOKEN_EXPIRY });
+};
 
 /**
  * Verifica e decodifica um token JWT
  */
-export function verifyToken(token: string): TokenPayload {
-  return jwt.verify(token, secret) as TokenPayload;
-}
+export const verifyToken = (token: string): TokenPayload => {
+  try {
+    return jwt.verify(token, JWT_SECRET) as TokenPayload;
+  } catch (error) {
+    throw new Error('Token inválido ou expirado');
+  }
+};

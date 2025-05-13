@@ -1,60 +1,59 @@
 import { Request, Response, NextFunction } from 'express';
 import { verifyToken } from '../ utils/jwt';
 
-// Estender a interface Request para incluir o 'user'
-declare global {
-  namespace Express {
-    interface Request {
-      user?: {
-        id: number;
-        email: string;
-        isMaster: boolean;
-        permissions: string[];
-      };
-    }
-  }
-}
-
 /**
  * Middleware de autenticação
- * Verifica se o token é válido e adiciona os dados do usuário na requisição
  */
-export function authenticate(req: Request, res: Response, next: NextFunction): void {
-  const authHeader = req.headers.authorization;
-
-  if (!authHeader?.startsWith('Bearer ')) {
-    res.status(401).json({ error: 'Token ausente ou malformado' });
-    return;
-  }
-
-  const token = authHeader.split(' ')[1];
-
+export const authenticate = (req: Request, res: Response, next: NextFunction) => {
   try {
+    // Obter o token do header Authorization
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ message: 'Token de autenticação ausente ou inválido' });
+    }
+
+    // Extrair o token
+    const token = authHeader.split(' ')[1];
+    
+    // Verificar e decodificar o token
     const decoded = verifyToken(token);
-    req.user = decoded;
+    
+    // Adicionar dados do usuário ao request para uso posterior
+    // @ts-ignore - Estendendo o objeto Request
+    req.userId = decoded.id;
+    // @ts-ignore - Estendendo o objeto Request
+    req.userPermissions = decoded.permissions;
+    // @ts-ignore - Estendendo o objeto Request
+    req.isMaster = decoded.isMaster;
+    
     next();
   } catch (error) {
-    res.status(401).json({ error: 'Token inválido ou expirado' });
+    return res.status(401).json({ message: 'Token de autenticação inválido ou expirado' });
   }
-}
+};
 
 /**
- * Middleware de autorização
- * Verifica se o usuário possui a permissão necessária para acessar o recurso
+ * Middleware de autorização baseado em permissões
  */
-export function authorize(requiredPermission: string) {
-  return (req: Request, res: Response, next: NextFunction): void => {
-    const user = req.user;
-
-    if (!user) {
-      res.status(401).json({ error: 'Usuário não autenticado' });
-      return;
-    }
-
-    if (user.isMaster || (user.permissions && user.permissions.includes(requiredPermission))) {
-      next(); // autorizado
-    } else {
-      res.status(403).json({ error: 'Permissão negada' });
+export const authorize = (requiredPermission: string) => {
+  return (req: Request, res: Response, next: NextFunction) => {
+    try {
+      // @ts-ignore - O middleware de autenticação adiciona o isMaster e userPermissions ao req
+      const { isMaster, userPermissions } = req;
+      
+      // Administradores têm acesso a tudo
+      if (isMaster) {
+        return next();
+      }
+      
+      // Verificar se o usuário tem a permissão necessária
+      if (!userPermissions || !userPermissions.includes(requiredPermission)) {
+        return res.status(403).json({ message: 'Acesso não autorizado' });
+      }
+      
+      next();
+    } catch (error) {
+      return res.status(403).json({ message: 'Acesso não autorizado' });
     }
   };
-}
+};

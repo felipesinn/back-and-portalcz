@@ -1,28 +1,31 @@
-import { Request, Response, NextFunction, ErrorRequestHandler } from 'express';
-
-interface AppError extends Error {
-  statusCode?: number;
-}
+import { Request, Response, NextFunction } from 'express';
 
 /**
- * Middleware de tratamento de erros global
+ * Middleware para tratar erros de forma assíncrona
  */
-export const errorHandler: ErrorRequestHandler = (
-  err: AppError, 
-  req: Request, 
-  res: Response, 
-  next: NextFunction
+export const asyncHandler = (fn: Function) => {
+  return (req: Request, res: Response, next: NextFunction) => {
+    Promise.resolve(fn(req, res, next)).catch(next);
+  };
+};
+
+/**
+ * Middleware global para tratamento de erros
+ */
+export const errorHandler = (
+  err: Error & { statusCode?: number },
+  _req: Request,
+  res: Response,
+  _next: NextFunction
 ) => {
   console.error('Erro:', err);
   
-  // Determina o status do erro (usa 500 como padrão)
+  // Definir código de status padrão como 500 se não for especificado
   const statusCode = err.statusCode || 500;
   
-  // Estrutura da resposta de erro
-  const errorResponse = {
+  // Enviar resposta de erro
+  res.status(statusCode).json({
     message: err.message || 'Erro interno do servidor',
-    ...(process.env.NODE_ENV !== 'production' && { stack: err.stack })
-  };
-  
-  res.status(statusCode).json(errorResponse);
+    stack: process.env.NODE_ENV === 'development' ? err.stack : undefined,
+  });
 };

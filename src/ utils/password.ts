@@ -1,17 +1,22 @@
 import bcrypt from 'bcrypt';
 
+// Número de rounds para o bcrypt
 const SALT_ROUNDS = 10;
 
 /**
- * Cria um hash para a senha
+ * Criptografa uma senha
  */
-export async function hashPassword(password: string): Promise<string> {
-  return await bcrypt.hash(password, SALT_ROUNDS);
-}
+export const hashPassword = async (password: string): Promise<string> => {
+  const salt = await bcrypt.genSalt(SALT_ROUNDS);
+  return bcrypt.hash(password, salt);
+};
 
 /**
- * Compara uma senha com um hash
+ * Compara a senha fornecida com a senha hash armazenada
  */
-export async function comparePassword(password: string, hash: string): Promise<boolean> {
-  return await bcrypt.compare(password, hash);
-}
+export const comparePassword = async (
+  password: string,
+  hashedPassword: string
+): Promise<boolean> => {
+  return bcrypt.compare(password, hashedPassword);
+};
