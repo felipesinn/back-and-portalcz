@@ -73,7 +73,7 @@ export const getAllUsers = async () => {
   const users = await prisma.user.findMany();
   
   // Formatar usuários para o frontend
-  return users.map(user => ({
+  return users.map((user: { id: any; name: any; email: any; isMaster: boolean; permissions: string[]; createdAt: any; }) => ({
     id: user.id,
     name: user.name,
     email: user.email,

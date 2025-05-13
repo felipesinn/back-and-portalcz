@@ -22,4 +22,27 @@ model User {
   isMaster    Boolean  @default(false)
   permissions String[] @default([])
   createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Relacionamentos
+  createdContents Content[] @relation("ContentCreator")
+  updatedContents Content[] @relation("ContentUpdater")
+}
+
+model Content {
+  id          Int      @id @default(autoincrement())
+  title       String
+  description String?
+  type        String  // 'photo', 'video', 'text', 'title'
+  sector      String  // 'suporte', 'tecnico', 'noc', 'comercial', 'adm'
+  filePath    String?
+  textContent String?
+  createdBy   Int
+  updatedBy   Int?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Relacionamentos
+  creator     User     @relation("ContentCreator", fields: [createdBy], references: [id])
+  updater     User?    @relation("ContentUpdater", fields: [updatedBy], references: [id])
 }
