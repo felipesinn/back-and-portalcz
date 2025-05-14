@@ -3,13 +3,18 @@ import prisma from '../lib/prisma';
 import { v4 as uuidv4 } from 'uuid';
 import fs from 'fs';
 import path from 'path';
+import { Prisma } from '@prisma/client';
 
 // Tipos de conteúdo suportados
 export enum ContentType {
   PHOTO = 'photo',
   VIDEO = 'video',
   TEXT = 'text',
-  TITLE = 'title'
+  TITLE = 'title',
+  TUTORIAL = 'tutorial',    // Novo tipo para tutoriais
+  PROCEDURE = 'procedure',  // Novo tipo para procedimentos
+  TROUBLESHOOTING = 'troubleshooting', // Novo tipo para solução de problemas
+  EQUIPMENT = 'equipment'   // Novo tipo para documentação de equipamentos
 }
 
 // Interface para dados de criação de conteúdo
@@ -21,7 +26,18 @@ export interface CreateContentInput {
   fileData?: Buffer;
   fileName?: string;
   textContent?: string;
-  createdBy: number; // ID do usuário que criou
+  steps?: ContentStep[];     // Nova propriedade para passos estruturados
+  priority?: number;         // Para ordenar tutoriais por importância
+  complexity?: number;       // Número de passos em procedimentos
+  createdBy: number;         // ID do usuário que criou
+}
+
+// Interface para passos estruturados
+export interface ContentStep {
+  title: string;
+  content: string;
+  order: number;
+  subSteps?: ContentStep[];  // Para estrutura hierárquica
 }
 
 // Interface para atualização de conteúdo
@@ -32,7 +48,10 @@ export interface UpdateContentInput {
   fileData?: Buffer;
   fileName?: string;
   textContent?: string;
-  updatedBy: number; // ID do usuário que atualizou
+  steps?: ContentStep[];     // Nova propriedade para passos estruturados
+  priority?: number;         // Para ordenar tutoriais por importância
+  complexity?: number;       // Número de passos em procedimentos
+  updatedBy: number;         // ID do usuário que atualizou
 }
 
 // Diretório para armazenar arquivos
@@ -65,6 +84,9 @@ export const createContent = async (data: CreateContentInput) => {
     filePath = uniqueFileName; // Salvar apenas o nome do arquivo no banco
   }
 
+  // Converter passos estruturados para formato JSON, se fornecidos
+  const stepsData = data.steps ? JSON.stringify(data.steps) : null;
+
   // Criar o registro no banco de dados
   const content = await prisma.content.create({
     data: {
@@ -74,11 +96,24 @@ export const createContent = async (data: CreateContentInput) => {
       sector: data.sector,
       filePath,
       textContent: data.textContent,
+      steps: stepsData !== null ? stepsData : Prisma.JsonNull, // Novo campo
+      priority: data.priority || 0,    // Novo campo
+      complexity: data.complexity || 0, // Novo campo
+      views: 0,                        // Inicializar visualizações
       createdBy: data.createdBy,
       createdAt: new Date(),
       updatedAt: new Date()
     }
   });
+
+  // Se o conteúdo tiver passos e estiver armazenado como string JSON, convertê-lo de volta
+  if ('steps' in content && content.steps && typeof content.steps === 'string') {
+    try {
+      content.steps = JSON.parse(content.steps);
+    } catch (e) {
+      console.error('Erro ao parsear passos:', e);
+    }
+  }
 
   return content;
 };
@@ -113,7 +148,17 @@ export const getAllContent = async (sector?: string) => {
     }
   });
 
-  return contents;
+  // Processar steps JSON para todos os itens
+  return contents.map(content => {
+    if (content.steps && typeof content.steps === 'string') {
+      try {
+        return { ...content, steps: JSON.parse(content.steps) };
+      } catch (e) {
+        console.error('Erro ao parsear passos:', e);
+      }
+    }
+    return content;
+  });
 };
 
 /**
@@ -144,6 +189,15 @@ export const getContentById = async (id: number) => {
     const error = new Error('Conteúdo não encontrado') as Error & { statusCode: number };
     error.statusCode = 404;
     throw error;
+  }
+
+  // Processar steps JSON
+  if (content.steps && typeof content.steps === 'string') {
+    try {
+      content.steps = JSON.parse(content.steps);
+    } catch (e) {
+      console.error('Erro ao parsear passos:', e);
+    }
   }
 
   return content;
@@ -182,6 +236,9 @@ export const updateContent = async (id: number, data: UpdateContentInput) => {
     filePath = uniqueFileName;
   }
 
+  // Converter passos estruturados para formato JSON, se fornecidos
+  const stepsData = data.steps ? JSON.stringify(data.steps) : undefined;
+
   // Atualizar o registro no banco de dados
   const updatedContent = await prisma.content.update({
     where: { id },
@@ -191,6 +248,9 @@ export const updateContent = async (id: number, data: UpdateContentInput) => {
       sector: data.sector,
       filePath,
       textContent: data.textContent,
+      steps: stepsData,                   // Novo campo
+      priority: data.priority,            // Novo campo
+      complexity: data.complexity,        // Novo campo
       updatedBy: data.updatedBy,
       updatedAt: new Date()
     },
@@ -211,6 +271,15 @@ export const updateContent = async (id: number, data: UpdateContentInput) => {
       }
     }
   });
+
+  // Se o conteúdo tiver passos e estiver armazenado como string JSON, convertê-lo de volta
+  if (updatedContent.steps && typeof updatedContent.steps === 'string') {
+    try {
+      updatedContent.steps = JSON.parse(updatedContent.steps);
+    } catch (e) {
+      console.error('Erro ao parsear passos:', e);
+    }
+  }
 
   return updatedContent;
 };
@@ -265,7 +334,17 @@ export const getContentByType = async (type: ContentType, sector?: string) => {
     }
   });
 
-  return contents;
+  // Processar steps JSON para todos os itens
+  return contents.map(content => {
+    if (content.steps && typeof content.steps === 'string') {
+      try {
+        return { ...content, steps: JSON.parse(content.steps) };
+      } catch (e) {
+        console.error('Erro ao parsear passos:', e);
+      }
+    }
+    return content;
+  });
 };
 
 /**
@@ -288,5 +367,41 @@ export const getContentBySector = async (sector: string) => {
     }
   });
 
-  return contents;
+  // Processar steps JSON para todos os itens
+  return contents.map(content => {
+    if (content.steps && typeof content.steps === 'string') {
+      try {
+        return { ...content, steps: JSON.parse(content.steps) };
+      } catch (e) {
+        console.error('Erro ao parsear passos:', e);
+      }
+    }
+    return content;
+  });
+};
+
+/**
+ * Incrementa o contador de visualizações de um conteúdo
+ */
+export const incrementViews = async (id: number) => {
+  // Verificar se o conteúdo existe
+  const existingContent = await prisma.content.findUnique({ where: { id } });
+  if (!existingContent) {
+    const error = new Error('Conteúdo não encontrado') as Error & { statusCode: number };
+    error.statusCode = 404;
+    throw error;
+  }
+
+  // Incrementar visualizações
+  const currentViews = existingContent.views || 0;
+  
+  const updatedContent = await prisma.content.update({
+    where: { id },
+    data: {
+      views: currentViews + 1,
+      updatedAt: new Date()
+    }
+  });
+
+  return updatedContent;
 };

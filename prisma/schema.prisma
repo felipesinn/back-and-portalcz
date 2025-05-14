@@ -1,9 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -15,16 +9,14 @@ datasource db {
 }
 
 model User {
-  id          Int      @id @default(autoincrement())
-  name        String
-  email       String   @unique
-  password    String
-  isMaster    Boolean  @default(false)
-  permissions String[] @default([])
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  
-  // Relacionamentos
+  id              Int       @id @default(autoincrement())
+  name            String
+  email           String    @unique
+  password        String
+  isMaster        Boolean   @default(false)
+  permissions     String[]  @default([])
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
   createdContents Content[] @relation("ContentCreator")
   updatedContents Content[] @relation("ContentUpdater")
 }
@@ -33,16 +25,21 @@ model Content {
   id          Int      @id @default(autoincrement())
   title       String
   description String?
-  type        String  // 'photo', 'video', 'text', 'title'
-  sector      String  // 'suporte', 'tecnico', 'noc', 'comercial', 'adm'
+  type        String
+  category    String?
+  sector      String
   filePath    String?
   textContent String?
+  priority    Int?
+  complexity  Int?
+  views       Int      @default(0)
   createdBy   Int
   updatedBy   Int?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
-  
-  // Relacionamentos
+  steps       Json?
   creator     User     @relation("ContentCreator", fields: [createdBy], references: [id])
   updater     User?    @relation("ContentUpdater", fields: [updatedBy], references: [id])
+
+  @@map("contents")
 }

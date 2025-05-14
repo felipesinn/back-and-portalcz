@@ -8,7 +8,8 @@ import {
   updateContentHandler,
   deleteContentHandler,
   getContentByTypeHandler,
-  getContentBySectorHandler
+  getContentBySectorHandler,
+  incrementViewsHandler // Adicionar importação
 } from '../controllers/contentController';
 import { authenticate, authorize } from '../middlewares/auth';
 import { asyncHandler } from '../middlewares/errorHandler';
@@ -32,5 +33,8 @@ router.get('/sector/:sector', asyncHandler(getContentBySectorHandler));
 router.get('/:id', asyncHandler(getContentByIdHandler));
 router.put('/:id', authenticate, upload.single('file'), asyncHandler(updateContentHandler));
 router.delete('/:id', authenticate, authorize('delete_content'), asyncHandler(deleteContentHandler));
+
+// Nova rota para incrementar visualizações - Não precisa de autenticação para simplificar
+router.post('/:id/view', asyncHandler(incrementViewsHandler));
 
 export default router;

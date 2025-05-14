@@ -8,33 +8,76 @@ import {
   deleteContent,
   getContentByType,
   getContentBySector,
-  ContentType
+  ContentType,
+  incrementViews
 } from '../services/contentService';
 
-/**
- * Controlador para criar conteúdo
- */
 export const createContentHandler = async (req: Request, res: Response) => {
-  // @ts-ignore - O middleware de autenticação adiciona o userId ao req
-  const userId = req.userId;
-  
-  // Processar os dados do arquivo, se existir
-  let fileData = null;
-  let fileName = null;
-  
-  if (req.file) {
-    fileData = req.file.buffer;
-    fileName = req.file.originalname;
+  try {
+    // Log para depuração
+    console.log("Corpo da requisição:", req.body);
+    
+    // Validar campos obrigatórios
+    if (!req.body.title) {
+      return res.status(400).json({ message: "O campo 'title' é obrigatório" });
+    }
+    
+    if (!req.body.type) {
+      return res.status(400).json({ message: "O campo 'type' é obrigatório" });
+    }
+    
+    if (!req.body.sector) {
+      return res.status(400).json({ message: "O campo 'sector' é obrigatório" });
+    }
+    
+    // @ts-ignore - O middleware de autenticação adiciona o userId ao req
+    const userId = req.userId || 1; // Valor padrão para testes
+    
+    // Processar os dados do arquivo, se existir
+    let fileData = null;
+    let fileName = undefined;
+    
+    if (req.file) {
+      fileData = req.file.buffer;
+      fileName = req.file.originalname;
+    }
+    
+    // Prepare os dados com tipos corretos
+    const contentData = {
+      title: req.body.title,
+      description: req.body.description || "",
+      type: req.body.type,
+      sector: req.body.sector,
+      textContent: req.body.textContent,
+      steps: req.body.steps ? 
+        (typeof req.body.steps === 'string' ? JSON.parse(req.body.steps) : req.body.steps) : 
+        undefined,
+      priority: req.body.priority ? parseInt(req.body.priority) : 0,
+      complexity: req.body.complexity ? parseInt(req.body.complexity) : 0,
+      fileData: fileData || undefined,
+      fileName,
+      createdBy: userId
+    };
+    
+    console.log("Dados preparados para o serviço:", {
+      title: contentData.title,
+      type: contentData.type,
+      sector: contentData.sector,
+      createdBy: contentData.createdBy
+    });
+    
+    const content = await createContent(contentData);
+    console.log("Conteúdo criado com sucesso:", content.id);
+    
+    res.status(201).json(content);
+  } catch (error) {
+    console.error("Erro ao criar conteúdo:", error);
+    res.status(500).json({ 
+      message: "Erro ao criar conteúdo", 
+      error: error instanceof Error ? error.message : 'Unknown error',
+      stack: process.env.NODE_ENV === 'development' && error instanceof Error ? error.stack : undefined
+    });
   }
-  
-  const content = await createContent({
-    ...req.body,
-    fileData,
-    fileName,
-    createdBy: userId
-  });
-  
-  res.status(201).json(content);
 };
 
 /**
@@ -75,6 +118,9 @@ export const updateContentHandler = async (req: Request, res: Response) => {
   
   const updatedContent = await updateContent(contentId, {
     ...req.body,
+    // Converter valores de string para número/boolean quando necessário
+    priority: req.body.priority ? parseInt(req.body.priority) : undefined,
+    complexity: req.body.complexity ? parseInt(req.body.complexity) : undefined,
     fileData,
     fileName,
     updatedBy: userId
@@ -115,4 +161,13 @@ export const getContentBySectorHandler = async (req: Request, res: Response) => 
   const { sector } = req.params;
   const contents = await getContentBySector(sector);
   res.status(200).json(contents);
+};
+
+/**
+ * Controlador para incrementar visualizações
+ */
+export const incrementViewsHandler = async (req: Request, res: Response) => {
+  const contentId = parseInt(req.params.id);
+  const updatedContent = await incrementViews(contentId);
+  res.status(200).json({ success: true, views: updatedContent.views });
 };
