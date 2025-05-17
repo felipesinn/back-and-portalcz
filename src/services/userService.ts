@@ -60,7 +60,7 @@ export const createUser = async (data: CreateUserInput) => {
     name: user.name,
     email: user.email,
     role: determineUserRole(user.isMaster, user.permissions),
-    sector: determineUserSector(user.permissions),  // Adicionado campo sector
+    sector: determineUserSector(user.permissions),
     permissions: user.permissions,
     createdAt: user.createdAt,
   };
@@ -78,7 +78,7 @@ export const getAllUsers = async () => {
     name: user.name,
     email: user.email,
     role: determineUserRole(user.isMaster, user.permissions),
-    sector: determineUserSector(user.permissions),  // Adicionado campo sector
+    sector: determineUserSector(user.permissions),
     permissions: user.permissions,
     createdAt: user.createdAt,
   }));
@@ -102,7 +102,7 @@ export const getUserById = async (id: number) => {
     name: user.name,
     email: user.email,
     role: determineUserRole(user.isMaster, user.permissions),
-    sector: determineUserSector(user.permissions),  // Adicionado campo sector
+    sector: determineUserSector(user.permissions),
     permissions: user.permissions,
     createdAt: user.createdAt,
   };
@@ -154,7 +154,7 @@ export const updateUser = async (id: number, data: UpdateUserInput) => {
     name: updatedUser.name,
     email: updatedUser.email,
     role: determineUserRole(updatedUser.isMaster, updatedUser.permissions),
-    sector: determineUserSector(updatedUser.permissions),  // Adicionado campo sector
+    sector: determineUserSector(updatedUser.permissions),
     permissions: updatedUser.permissions,
     createdAt: updatedUser.createdAt,
   };

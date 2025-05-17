@@ -1,6 +1,4 @@
-
-import { UserRole, UserSector } from '../types/content.types';
-
+import { UserRole } from '../types/content.types';
 
 // Lista de todas as permissões disponíveis no sistema
 export const ALL_PERMISSIONS = [
@@ -41,6 +39,13 @@ const ROLE_PERMISSIONS: Record<UserRole, string[]> = {
     'read_user'
   ],
   
+  // Manager tem algumas permissões de gerenciamento
+  'manager': [
+    'create_content',
+    'read_content',
+    'update_content'
+  ],
+  
   // Usuário comum tem apenas permissões de leitura
   'user': [
     'read_content'
@@ -74,14 +79,14 @@ export const hasPermission = (
 // Função para obter todas as permissões do usuário com base no seu papel e setor
 export const getUserPermissions = (
   role: UserRole,
-  sector: UserSector
+  sector: string | undefined
 ): string[] => {
   // Permissões básicas baseadas no papel
   const basePermissions = ROLE_PERMISSIONS[role] || [];
   
   // Adicionar permissão do setor do usuário
   const permissions = [...basePermissions];
-  if (!permissions.includes(sector) && !permissions.includes('all')) {
+  if (sector && !permissions.includes(sector) && !permissions.includes('all')) {
     permissions.push(sector);
   }
   

@@ -10,7 +10,7 @@ export enum ContentType {
 
 // Setores da empresa
 export type SectorType = 'suporte' | 'tecnico' | 'noc' | 'comercial' | 'adm';
-export type UserRole = 'super_admin' | 'admin' | 'user';
+export type UserRole = 'super_admin' | 'admin' | 'manager' | 'user';
 export type UserSector = 'suporte' | 'tecnico' | 'noc' | 'comercial' | 'adm';
 
 // Interface para criador/editor

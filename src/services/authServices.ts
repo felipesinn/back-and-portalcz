@@ -11,7 +11,7 @@ interface AuthResult {
     name: string;
     email: string;
     role: string;
-    sector?: string; // Adicionado o campo sector
+    sector?: string;
     permissions: string[];
   };
 }
@@ -58,7 +58,7 @@ export const loginUser = async (data: LoginInput): Promise<AuthResult> => {
       name: user.name,
       email: user.email,
       role: role,
-      sector: sector, // Incluído o setor na resposta
+      sector: sector,
       permissions: user.permissions,
     }
   };

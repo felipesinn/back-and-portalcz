@@ -1,4 +1,3 @@
-// src/services/contentService.ts
 import prisma from '../lib/prisma';
 import { v4 as uuidv4 } from 'uuid';
 import fs from 'fs';
@@ -11,10 +10,10 @@ export enum ContentType {
   VIDEO = 'video',
   TEXT = 'text',
   TITLE = 'title',
-  TUTORIAL = 'tutorial',    // Novo tipo para tutoriais
-  PROCEDURE = 'procedure',  // Novo tipo para procedimentos
-  TROUBLESHOOTING = 'troubleshooting', // Novo tipo para solução de problemas
-  EQUIPMENT = 'equipment'   // Novo tipo para documentação de equipamentos
+  TUTORIAL = 'tutorial',
+  PROCEDURE = 'procedure',
+  TROUBLESHOOTING = 'troubleshooting',
+  EQUIPMENT = 'equipment'
 }
 
 // Interface para dados de criação de conteúdo
@@ -26,10 +25,10 @@ export interface CreateContentInput {
   fileData?: Buffer;
   fileName?: string;
   textContent?: string;
-  steps?: ContentStep[];     // Nova propriedade para passos estruturados
-  priority?: number;         // Para ordenar tutoriais por importância
-  complexity?: number;       // Número de passos em procedimentos
-  createdBy: number;         // ID do usuário que criou
+  steps?: ContentStep[];
+  priority?: number;
+  complexity?: number;
+  createdBy: number;
 }
 
 // Interface para passos estruturados
@@ -37,7 +36,7 @@ export interface ContentStep {
   title: string;
   content: string;
   order: number;
-  subSteps?: ContentStep[];  // Para estrutura hierárquica
+  subSteps?: ContentStep[];
 }
 
 // Interface para atualização de conteúdo
@@ -48,10 +47,10 @@ export interface UpdateContentInput {
   fileData?: Buffer;
   fileName?: string;
   textContent?: string;
-  steps?: ContentStep[];     // Nova propriedade para passos estruturados
-  priority?: number;         // Para ordenar tutoriais por importância
-  complexity?: number;       // Número de passos em procedimentos
-  updatedBy: number;         // ID do usuário que atualizou
+  steps?: ContentStep[] | string;
+  priority?: number;
+  complexity?: number;
+  updatedBy: number;
 }
 
 // Diretório para armazenar arquivos
@@ -66,6 +65,8 @@ if (!fs.existsSync(UPLOAD_DIR)) {
  * Criar novo conteúdo
  */
 export const createContent = async (data: CreateContentInput) => {
+    console.log("Criando conteúdo com dados:", JSON.stringify(data, null, 2));
+
   let filePath = null;
 
   // Se houver um arquivo, salvá-lo no sistema de arquivos
@@ -96,10 +97,10 @@ export const createContent = async (data: CreateContentInput) => {
       sector: data.sector,
       filePath,
       textContent: data.textContent,
-      steps: stepsData !== null ? stepsData : Prisma.JsonNull, // Novo campo
-      priority: data.priority || 0,    // Novo campo
-      complexity: data.complexity || 0, // Novo campo
-      views: 0,                        // Inicializar visualizações
+      steps: stepsData !== null ? stepsData : Prisma.JsonNull,
+      priority: data.priority || 0,
+      complexity: data.complexity || 0,
+      views: 0,
       createdBy: data.createdBy,
       createdAt: new Date(),
       updatedAt: new Date()
@@ -236,8 +237,11 @@ export const updateContent = async (id: number, data: UpdateContentInput) => {
     filePath = uniqueFileName;
   }
 
-  // Converter passos estruturados para formato JSON, se fornecidos
-  const stepsData = data.steps ? JSON.stringify(data.steps) : undefined;
+  // Garantir que steps seja uma string JSON se fornecido
+  let stepsData = undefined;
+  if (data.steps) {
+    stepsData = typeof data.steps === 'string' ? data.steps : JSON.stringify(data.steps);
+  }
 
   // Atualizar o registro no banco de dados
   const updatedContent = await prisma.content.update({
@@ -248,9 +252,9 @@ export const updateContent = async (id: number, data: UpdateContentInput) => {
       sector: data.sector,
       filePath,
       textContent: data.textContent,
-      steps: stepsData,                   // Novo campo
-      priority: data.priority,            // Novo campo
-      complexity: data.complexity,        // Novo campo
+      steps: stepsData,
+      priority: data.priority,
+      complexity: data.complexity,
       updatedBy: data.updatedBy,
       updatedAt: new Date()
     },
@@ -285,30 +289,65 @@ export const updateContent = async (id: number, data: UpdateContentInput) => {
 };
 
 /**
- * Excluir conteúdo
+ * Excluir conteúdo - CORRIGIDO
  */
-export const deleteContent = async (id: number) => {
-  // Verificar se o conteúdo existe
-  const existingContent = await prisma.content.findUnique({ where: { id } });
-  if (!existingContent) {
-    const error = new Error('Conteúdo não encontrado') as Error & { statusCode: number };
-    error.statusCode = 404;
-    throw error;
-  }
-
-  // Remover o arquivo, se existir
-  if (existingContent.filePath) {
-    const filePath = path.join(UPLOAD_DIR, existingContent.filePath);
-    if (fs.existsSync(filePath)) {
-      fs.unlinkSync(filePath);
+export async function deleteContent(id: string | number): Promise<boolean> {
+  try {
+    // Converter ID para o formato correto
+    const contentId = typeof id === 'string' ? parseInt(id) : id;
+    
+    console.log(`Backend: Tentando excluir conteúdo ID: ${contentId}`);
+    
+    // Verificar se o conteúdo existe
+    const existingContent = await prisma.content.findUnique({ 
+      where: { id: contentId }
+    });
+    
+    if (!existingContent) {
+      console.log(`Backend: Conteúdo ID ${contentId} não encontrado para exclusão`);
+      return false;
     }
+    
+    // Se houver arquivo, excluí-lo do sistema de arquivos
+    if (existingContent.filePath) {
+      const filePath = path.join(UPLOAD_DIR, existingContent.filePath);
+      if (fs.existsSync(filePath)) {
+        console.log(`Backend: Excluindo arquivo: ${filePath}`);
+        fs.unlinkSync(filePath);
+      }
+    }
+    
+    // Excluir o conteúdo do banco de dados
+    await prisma.content.delete({
+      where: { id: contentId }
+    });
+    
+    // Verificação de segurança para confirmar que a exclusão funcionou
+    const checkDeleted = await prisma.content.findUnique({
+      where: { id: contentId }
+    });
+    
+    if (checkDeleted) {
+      console.error(`Backend: ERRO - Conteúdo ID ${contentId} ainda existe após exclusão!`);
+      return false;
+    }
+    
+    console.log(`Backend: Conteúdo ID ${contentId} excluído com sucesso`);
+    return true;
+  } catch (error) {
+    console.error(`Backend: Erro ao excluir conteúdo ID ${id}:`, error);
+    
+    // Verifica se é erro do Prisma de item não encontrado (P2025)
+    if (error instanceof Prisma.PrismaClientKnownRequestError) {
+      if (error.code === 'P2025') {
+        console.log(`Backend: Conteúdo não encontrado para exclusão (Prisma P2025)`);
+        return false;
+      }
+    }
+    
+    return false; // Retorna false para qualquer outro tipo de erro
   }
-
-  // Excluir o registro do banco de dados
-  await prisma.content.delete({ where: { id } });
-  
-  return { message: 'Conteúdo excluído com sucesso' };
-};
+}
 
 /**
  * Buscar conteúdo por tipo

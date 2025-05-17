@@ -1,7 +1,7 @@
-// src/middlewares/validationMiddleware.ts
 import { Request, Response, NextFunction } from 'express';
 import { AnyZodObject, ZodError } from 'zod';
 import { hasPermission } from '../services/permissions.service';
+import { UserRole } from '../types/content.types';
 
 /**
  * Middleware para validação de dados com Zod
@@ -39,9 +39,7 @@ export const validate = (schema: AnyZodObject) => {
 export const validatePermission = (requiredPermission: string) => {
   return (req: Request, res: Response, next: NextFunction) => {
     try {
-      // @ts-ignore - O middleware de autenticação adiciona essas propriedades
       const userRole = req.userRole;
-      // @ts-ignore
       const userPermissions = req.userPermissions || [];
 
       if (!userRole) {
@@ -49,7 +47,7 @@ export const validatePermission = (requiredPermission: string) => {
       }
 
       // Verificar se o usuário tem a permissão necessária
-      if (!hasPermission(userRole, userPermissions, requiredPermission)) {
+      if (!hasPermission(userRole as UserRole, userPermissions, requiredPermission)) {
         return res.status(403).json({ message: 'Acesso não autorizado' });
       }
 
@@ -67,11 +65,8 @@ export const validatePermission = (requiredPermission: string) => {
 export const validateSectorAccess = (paramName: string = 'sector') => {
   return (req: Request, res: Response, next: NextFunction) => {
     try {
-      // @ts-ignore - O middleware de autenticação adiciona essas propriedades
       const userRole = req.userRole;
-      // @ts-ignore
       const userPermissions = req.userPermissions || [];
-      // @ts-ignore
       const userSector = req.userSector;
 
       if (!userRole) {

@@ -1,3 +1,4 @@
+// src/utils/validationSchemas.ts
 import { z } from 'zod';
 
 // Schema para validar os dados de criação de usuário
@@ -28,5 +29,3 @@ export const updateUserSchema = z.object({
 export type CreateUserInput = z.infer<typeof createUserSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;
 export type UpdateUserInput = z.infer<typeof updateUserSchema>;
-
-

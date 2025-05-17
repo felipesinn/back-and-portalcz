@@ -1,3 +1,4 @@
+// src/utils/password.ts
 import bcrypt from 'bcrypt';
 
 // Número de rounds para o bcrypt
